@@ -63,33 +63,26 @@
 let userIdToken = "";
 
 function onGoogleLogin(response) {
-  userIdToken = response.credential; // 구글이 발급한 idToken(JWT)
-  // 서버로 idToken 전송 후, 권한 체크
-  fetch("https://script.google.com/macros/s/AKfycbzSmwf_XpsOeB0_n-9nQ458eYfUQev12twevYKdMO9IjElUQaHRMTOTZWE62QRiG_FP3g/exec", {
+  userIdToken = response.credential;
+  // 서버로 idToken 전송해서 권한 체크
+  fetch(SHEETS_API_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      type: "oauth_login",
-      idToken: userIdToken
-    })
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: "type=oauth_login&idToken=" + encodeURIComponent(userIdToken)
   })
   .then(res => res.json())
   .then(data => {
     if (data.result === "success") {
-      // 로그인 성공
       localStorage.setItem("userEmail", data.email);
       localStorage.setItem("userLevel", data.level);
       alert("✅ 로그인 성공: " + data.email);
-      // 이후, fetch 사용시 헤더에 userIdToken 첨부해서 서버에 전달/인증
-      // 이후 로직 진행
-      // 예: loadItems(), loadSkills(), loadFormulas() 등
+      // 로그인 성공시만 실제 데이터 요청 (POST+idToken 방식)
+      loadItems();
+      loadSkills();
+      loadFormulas();
     } else {
       alert("❌ 권한이 없습니다.");
     }
-  })
-  .catch(err => {
-    alert("🚨 서버 오류");
-    console.error(err);
   });
 }
 </script>
@@ -132,23 +125,14 @@ function onGoogleLogin(response) {
     let formulas = {};
 
     function loadItems() {
-      fetch(SHEETS_API_URL + "?type=items")
-        .then(res => res.json())
-        .then(data => {
-          const container = document.getElementById("equipList");
-          container.innerHTML = '';
-          data.forEach(item => {
-            const div = document.createElement("div");
-            div.textContent = `${item.이름} (+${item.힘 || 0} 힘 / +${item.지능 || 0} 지능)`;
-            div.style.cssText = 'border:1px solid #ccc; padding:6px; margin-bottom:4px; cursor:pointer;';
-            div.onclick = () => {
-              selectedItem = item;
-              highlightSelected(div, container);
-            };
-            container.appendChild(div);
-          });
-        });
-    }
+  fetch(SHEETS_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: "type=items&idToken=" + encodeURIComponent(userIdToken)
+  })
+  .then(res => res.json())
+  .then(data => { /* ... */ });
+}
 
     function loadSkills() {
       fetch(SHEETS_API_URL + "?type=skills")
