@@ -87,13 +87,6 @@ function onGoogleLogin(response) {
 }
 </script>
   
-  <div id="loginBox" style="display:none;">
-    <h2>로그인</h2>
-    <input type="email" id="loginEmail" placeholder="이메일" />
-    <input type="password" id="loginPassword" placeholder="비밀번호" />
-    <button onclick="handleLogin()">로그인</button>
-  </div>
-
   <div class="container">
     <div class="panel" id="equipPanel">
       <h2>① 장비 선택</h2>
@@ -135,33 +128,41 @@ function onGoogleLogin(response) {
 }
 
     function loadSkills() {
-      fetch(SHEETS_API_URL + "?type=skills")
-        .then(res => res.json())
-        .then(data => {
-          const container = document.getElementById("skillList");
-          container.innerHTML = '';
-          data.forEach(skill => {
-            const div = document.createElement("div");
-            div.textContent = `${skill.스킬명} (계수 ${skill.계수})`;
-            div.style.cssText = 'border:1px solid #ccc; padding:6px; margin-bottom:4px; cursor:pointer;';
-            div.onclick = () => {
-              selectedSkill = skill;
-              highlightSelected(div, container);
-            };
-            container.appendChild(div);
-          });
+      fetch(SHEETS_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "type=skills&idToken=" + encodeURIComponent(userIdToken)
+      })
+      .then(res => res.json())
+      .then(data => {
+        const container = document.getElementById("skillList");
+        container.innerHTML = '';
+        data.forEach(skill => {
+          const div = document.createElement("div");
+          div.textContent = `${skill.스킬명} (계수 ${skill.계수})`;
+          div.style.cssText = 'border:1px solid #ccc; padding:6px; margin-bottom:4px; cursor:pointer;';
+          div.onclick = () => {
+            selectedSkill = skill;
+            highlightSelected(div, container);
+          };
+          container.appendChild(div);
         });
+      });
     }
 
     function loadFormulas() {
-      fetch(SHEETS_API_URL + "?type=formulas")
-        .then(res => res.json())
-        .then(data => {
-          data.forEach(row => {
-            formulas[row.key] = row.formula;
-          });
-        });
-    }
+  fetch(SHEETS_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: "type=formulas&idToken=" + encodeURIComponent(userIdToken)
+  })
+  .then(res => res.json())
+  .then(data => {
+    data.forEach(row => {
+      formulas[row.key] = row.formula;
+    });
+  });
+}
 
     function highlightSelected(selectedDiv, container) {
       [...container.children].forEach(child => {
@@ -194,64 +195,10 @@ function onGoogleLogin(response) {
       document.getElementById("result").textContent = `결과: ${result}`;
     }
 
-    function checkUserLevel() {
-  fetch(`${SHEETS_API_URL}?type=user`)
-    .then(res => res.json())
-    .then(data => {
-      if (data.error === "unauthorized") {
-        alert("❌ Google 로그인이 필요합니다.");
-        return;
-      }
-      if (data.error === "not_allowed") {
-        alert("❌ 허용된 사용자만 접근할 수 있습니다.");
-        return;
-      }
 
-      localStorage.setItem("userEmail", data.email);
-      localStorage.setItem("userLevel", data.level);
-      console.log("✅ 로그인 성공:", data.email, "/", data.level);
-      applyUserRestrictions();  // 등급에 따른 UI 조정
-    })
-    .catch(err => {
-      alert("🚨 서버 오류 발생");
-      console.error(err);
-    });
-}
-    function handleLogin() {
-      const email = document.getElementById("loginEmail").value.trim();
-      const password = document.getElementById("loginPassword").value;
-      if (!email || !password) return alert("이메일과 비밀번호를 입력하세요.");
-      const hashed = CryptoJS.SHA256(password).toString();
-      fetch(`${SHEETS_API_URL}?type=secure_login&email=${encodeURIComponent(email)}&hash=${hashed}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.result === "success") {
-            localStorage.setItem("userEmail", email);
-            localStorage.setItem("userLevel", data.level);
-            alert("✅ 로그인 성공: " + data.level);
-            location.reload();
-          } else {
-            alert("❌ 로그인 실패: 이메일 또는 비밀번호가 일치하지 않습니다.");
-          }
-        })
-        .catch(err => {
-          alert("🚨 서버 오류 발생");
-          console.error(err);
-        });
-    }
-
+    
     window.onload = function () {
-      const email = localStorage.getItem("userEmail");
-      const level = localStorage.getItem("userLevel");
-      if (email && level) {
-        document.getElementById("loginBox").style.display = "none";
-      } else {
-        document.getElementById("loginBox").style.display = "block";
-      }
-      loadItems();
-      loadSkills();
-      loadFormulas();
-      checkUserLevel();
+
     };
   </script>
 </body>
