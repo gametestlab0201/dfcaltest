@@ -63,6 +63,12 @@
 <script>
 let userIdToken = "";
 
+window.onload = function () {
+  // 새로고침 시에는 자동으로 아무것도 하지 않음 (단, 필요시 로그인 UI 컨트롤만)
+  document.getElementById('logoutBtn').style.display = 'none';
+};
+
+// 구글 로그인 콜백에서만 토큰 저장 + 데이터 로드
 function onGoogleLogin(response) {
   userIdToken = response.credential;
   fetch(SHEETS_API_URL, {
@@ -76,6 +82,7 @@ function onGoogleLogin(response) {
       localStorage.setItem("userEmail", data.email);
       localStorage.setItem("userLevel", data.level);
       alert("✅ 로그인 성공: " + data.email);
+      document.getElementById('logoutBtn').style.display = 'inline-block';
       loadItems();
       loadSkills();
       loadFormulas();
@@ -84,7 +91,7 @@ function onGoogleLogin(response) {
       localStorage.removeItem("userEmail");
       localStorage.removeItem("userLevel");
       alert("❌ 권한이 없습니다. (로그아웃됩니다)");
-      location.reload();  // or UI를 로그인 화면으로 전환
+      location.reload();
     }
   });
 }
@@ -218,38 +225,7 @@ function logout() {
   location.reload();
 }
     
-window.onload = function () {
-  // 새로고침 시에는 자동으로 아무것도 하지 않음 (단, 필요시 로그인 UI 컨트롤만)
-  document.getElementById('logoutBtn').style.display = 'none';
-};
 
-// 구글 로그인 콜백에서만 토큰 저장 + 데이터 로드
-function onGoogleLogin(response) {
-  userIdToken = response.credential;
-  fetch(SHEETS_API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: "type=oauth_login&idToken=" + encodeURIComponent(userIdToken)
-  })
-  .then(res => res.json())
-  .then(data => {
-    if (data.result === "success") {
-      localStorage.setItem("userEmail", data.email);
-      localStorage.setItem("userLevel", data.level);
-      alert("✅ 로그인 성공: " + data.email);
-      document.getElementById('logoutBtn').style.display = 'inline-block';
-      loadItems();
-      loadSkills();
-      loadFormulas();
-    } else {
-      // 여기서 기존 상태를 리셋!
-      localStorage.removeItem("userEmail");
-      localStorage.removeItem("userLevel");
-      alert("❌ 권한이 없습니다. (로그아웃됩니다)");
-      location.reload();
-    }
-  });
-}
   </script>
 </body>
 </html>
