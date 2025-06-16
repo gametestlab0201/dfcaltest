@@ -120,38 +120,51 @@ function onGoogleLogin(response) {
     let selectedSkill = null;
     let formulas = {};
 
-    function loadItems() {
+function loadItems() {
   fetch(SHEETS_API_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: "type=items&idToken=" + encodeURIComponent(userIdToken)
   })
   .then(res => res.json())
-  .then(data => { /* ... */ });
+  .then(data => {
+    const container = document.getElementById("equipList");
+    container.innerHTML = '';
+    data.forEach(item => {
+      const div = document.createElement("div");
+      div.textContent = `${item.이름} (+${item.힘 || 0} 힘 / +${item.지능 || 0} 지능)`;
+      div.style.cssText = 'border:1px solid #ccc; padding:6px; margin-bottom:4px; cursor:pointer;';
+      div.onclick = () => {
+        selectedItem = item;
+        highlightSelected(div, container);
+      };
+      container.appendChild(div);
+    });
+  });
 }
 
-    function loadSkills() {
-      fetch(SHEETS_API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: "type=skills&idToken=" + encodeURIComponent(userIdToken)
-      })
-      .then(res => res.json())
-      .then(data => {
-        const container = document.getElementById("skillList");
-        container.innerHTML = '';
-        data.forEach(skill => {
-          const div = document.createElement("div");
-          div.textContent = `${skill.스킬명} (계수 ${skill.계수})`;
-          div.style.cssText = 'border:1px solid #ccc; padding:6px; margin-bottom:4px; cursor:pointer;';
-          div.onclick = () => {
-            selectedSkill = skill;
-            highlightSelected(div, container);
-          };
-          container.appendChild(div);
-        });
-      });
-    }
+function loadSkills() {
+  fetch(SHEETS_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: "type=skills&idToken=" + encodeURIComponent(userIdToken)
+  })
+  .then(res => res.json())
+  .then(data => {
+    const container = document.getElementById("skillList");
+    container.innerHTML = '';
+    data.forEach(skill => {
+      const div = document.createElement("div");
+      div.textContent = `${skill.스킬명} (계수 ${skill.계수})`;
+      div.style.cssText = 'border:1px solid #ccc; padding:6px; margin-bottom:4px; cursor:pointer;';
+      div.onclick = () => {
+        selectedSkill = skill;
+        highlightSelected(div, container);
+      };
+      container.appendChild(div);
+    });
+  });
+}
 
     function loadFormulas() {
   fetch(SHEETS_API_URL, {
