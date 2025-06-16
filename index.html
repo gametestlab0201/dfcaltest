@@ -211,31 +211,34 @@ function doGet(e) {
 
 
 function checkUserLevel() {
+  console.log("🔍 checkUserLevel() 실행됨");
+
   fetch(SHEETS_API_URL)
-  .then(res => res.json())
-  .then(data => {
-    if (data.error === "unauthorized") {
-      alert("❗ Google 로그인 상태가 아니거나, 권한이 없습니다.");
-      console.error("로그인 오류 응답:", data);
-      return;
-    }
+    .then(res => {
+      console.log("📥 응답 상태 코드:", res.status);
+      if (!res.ok) throw new Error("응답 실패 (HTTP " + res.status + ")");
+      return res.json();
+    })
+    .then(data => {
+      console.log("📦 응답 데이터:", data);
 
-    userEmail = data.email;
-    userLevel = data.level;
+      if (data.error === "unauthorized") {
+        alert("❗ Google 로그인 상태가 아니거나, 권한이 없습니다.");
+        return;
+      }
 
-    if (userLevel === "unregistered") {
-      alert("등록되지 않은 사용자입니다.");
-    } else {
+      userEmail = data.email;
+      userLevel = data.level;
       console.log("✅ 로그인 성공:", userEmail, "/", userLevel);
-      applyUserRestrictions();
-    }
-  })
-  .catch(err => {
-    alert("서버 오류 발생");
-    console.error("Fetch 실패:", err);
-  });
 
+      applyUserRestrictions();
+    })
+    .catch(err => {
+      alert("🚨 서버 오류 발생 (콘솔 로그 확인)");
+      console.error("❌ Fetch 실패 상세 정보:", err);
+    });
 }
+
 
 
 window.onload = function () {
