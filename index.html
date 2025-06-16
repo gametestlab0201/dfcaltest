@@ -39,6 +39,8 @@
       }
     }
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
 </head>
 <body>
   <div class="container">
@@ -239,15 +241,61 @@ function checkUserLevel() {
     });
 }
 
+function handleLogin() {
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value;
+
+  if (!email || !password) {
+    alert("이메일과 비밀번호를 입력하세요.");
+    return;
+  }
+
+  const hashed = CryptoJS.SHA256(password).toString();
+
+  fetch(`${SHEETS_API_URL}?type=secure_login&email=${encodeURIComponent(email)}&hash=${hashed}`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.result === "success") {
+        localStorage.setItem("userEmail", email);
+        localStorage.setItem("userLevel", data.level);
+        alert("✅ 로그인 성공: " + data.level);
+        location.reload();
+      } else {
+        alert("❌ 로그인 실패: 이메일 또는 비밀번호가 일치하지 않습니다.");
+      }
+    })
+    .catch(err => {
+      alert("🚨 서버 오류 발생");
+      console.error(err);
+    });
+}
 
 
 window.onload = function () {
-    loadItems();
-    loadSkills();
-    loadFormulas();
-    checkUserLevel();
-  };
+  const email = localStorage.getItem("userEmail");
+  const level = localStorage.getItem("userLevel");
+
+  if (email && level) {
+    document.getElementById("loginBox").style.display = "none";
+    // 다른 UI 열기 등 추가 작업 가능
+  } else {
+    document.getElementById("loginBox").style.display = "block";
+  }
+
+  loadItems();
+  loadSkills();
+  loadFormulas();
+  checkUserLevel();
+};
+
 
   </script>
+  <div id="loginBox">
+  <h2>로그인</h2>
+  <input type="email" id="loginEmail" placeholder="이메일" />
+  <input type="password" id="loginPassword" placeholder="비밀번호" />
+  <button onclick="handleLogin()">로그인</button>
+</div>
+
 </body>
 </html>
