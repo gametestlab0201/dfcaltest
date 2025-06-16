@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <meta charset="UTF-8" />
   <title>던파 데미지 계산기</title>
   <style>
@@ -45,6 +46,54 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 </head>
 <body>
+  <div id="g_id_onload"
+     data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+     data-callback="onGoogleLogin"
+     data-auto_prompt="false"></div>
+<div class="g_id_signin"
+     data-type="standard"
+     data-size="large"
+     data-theme="outline"
+     data-text="sign_in_with"
+     data-shape="rectangular"
+     data-logo_alignment="left">
+</div>
+
+<script>
+let userIdToken = "";
+
+function onGoogleLogin(response) {
+  userIdToken = response.credential; // 구글이 발급한 idToken(JWT)
+  // 서버로 idToken 전송 후, 권한 체크
+  fetch("https://script.google.com/macros/s/AKfycbzSmwf_XpsOeB0_n-9nQ458eYfUQev12twevYKdMO9IjElUQaHRMTOTZWE62QRiG_FP3g/exec", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      type: "oauth_login",
+      idToken: userIdToken
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.result === "success") {
+      // 로그인 성공
+      localStorage.setItem("userEmail", data.email);
+      localStorage.setItem("userLevel", data.level);
+      alert("✅ 로그인 성공: " + data.email);
+      // 이후, fetch 사용시 헤더에 userIdToken 첨부해서 서버에 전달/인증
+      // 이후 로직 진행
+      // 예: loadItems(), loadSkills(), loadFormulas() 등
+    } else {
+      alert("❌ 권한이 없습니다.");
+    }
+  })
+  .catch(err => {
+    alert("🚨 서버 오류");
+    console.error(err);
+  });
+}
+</script>
+  
   <div id="loginBox" style="display:none;">
     <h2>로그인</h2>
     <input type="email" id="loginEmail" placeholder="이메일" />
