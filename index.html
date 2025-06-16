@@ -218,23 +218,38 @@ function logout() {
   location.reload();
 }
     
-    window.onload = function () {
-  // 자동 로그인 유지: 이전에 로그인된 계정 정보가 남아 있으면 자동 실행
-  const email = localStorage.getItem("userEmail");
-  const level = localStorage.getItem("userLevel");
-  if (email && level) {
-    // 만약 이미 로그인 정보가 있다면
-    document.getElementById('logoutBtn').style.display = 'inline-block';
-    // 이전 로그인 세션(아이디 토큰)을 복구할 수 있으면 해야 함 (보통 GSI에서 자동 발급)
-    // 그 외엔 그냥 loadItems/loadSkills/loadFormulas를 실행하면 목록이 바로 보임
-    loadItems();
-    loadSkills();
-    loadFormulas();
-  } else {
-    document.getElementById('logoutBtn').style.display = 'none';
-    // 로그인 UI만 보이게(필요시 추가)
-  }
+window.onload = function () {
+  // 새로고침 시에는 자동으로 아무것도 하지 않음 (단, 필요시 로그인 UI 컨트롤만)
+  document.getElementById('logoutBtn').style.display = 'none';
 };
+
+// 구글 로그인 콜백에서만 토큰 저장 + 데이터 로드
+function onGoogleLogin(response) {
+  userIdToken = response.credential;
+  fetch(SHEETS_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: "type=oauth_login&idToken=" + encodeURIComponent(userIdToken)
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.result === "success") {
+      localStorage.setItem("userEmail", data.email);
+      localStorage.setItem("userLevel", data.level);
+      alert("✅ 로그인 성공: " + data.email);
+      document.getElementById('logoutBtn').style.display = 'inline-block';
+      loadItems();
+      loadSkills();
+      loadFormulas();
+    } else {
+      // 여기서 기존 상태를 리셋!
+      localStorage.removeItem("userEmail");
+      localStorage.removeItem("userLevel");
+      alert("❌ 권한이 없습니다. (로그아웃됩니다)");
+      location.reload();
+    }
+  });
+}
   </script>
 </body>
 </html>
