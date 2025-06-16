@@ -4,13 +4,10 @@
   <meta charset="UTF-8" />
   <title>던파 데미지 계산기</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
     body {
       font-family: 'Segoe UI', sans-serif;
-      margin: 0;
-      padding: 0;
+      margin: 0; padding: 0;
       background-color: #f4f6f8;
     }
     .container {
@@ -32,270 +29,192 @@
       margin-bottom: 12px;
       text-align: center;
     }
-
+    #loginBox {
+      padding: 20px;
+      text-align: center;
+    }
+    #loginBox input {
+      margin: 4px;
+      padding: 8px;
+      width: 200px;
+    }
     @media (max-width: 900px) {
-      .container {
-        flex-direction: column;
-      }
+      .container { flex-direction: column; }
     }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-
 </head>
 <body>
+  <div id="loginBox" style="display:none;">
+    <h2>로그인</h2>
+    <input type="email" id="loginEmail" placeholder="이메일" />
+    <input type="password" id="loginPassword" placeholder="비밀번호" />
+    <button onclick="handleLogin()">로그인</button>
+  </div>
+
   <div class="container">
     <div class="panel" id="equipPanel">
       <h2>① 장비 선택</h2>
       <div id="equipList">여기에 아이템 목록 표시 예정</div>
     </div>
-
     <div class="panel" id="skillPanel">
       <h2>② 스킬 선택</h2>
       <div id="skillList">여기에 스킬 목록 표시 예정</div>
     </div>
-
     <div class="panel" id="optionPanel">
       <h2>③ 옵션 & 결과</h2>
       <div id="optionArea">
         <button onclick="calculateDamage()">계산하기</button>
         <div id="result">결과: -</div>
       </div>
-<div id="adminPanel" style="margin-top:20px; display:none;">
-  <h3>⚙️ 공식 수정 (관리자 전용)</h3>
-  <textarea id="formulaEditor" rows="4" style="width:100%;"></textarea>
-  <button onclick="saveFormula()">💾 저장</button>
-</div>
-
+      <div id="adminPanel" style="margin-top:20px; display:none;">
+        <h3>⚙️ 공식 수정 (관리자 전용)</h3>
+        <textarea id="formulaEditor" rows="4" style="width:100%;"></textarea>
+        <button onclick="saveFormula()">💾 저장</button>
+      </div>
     </div>
   </div>
 
   <script>
     const SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbzSmwf_XpsOeB0_n-9nQ458eYfUQev12twevYKdMO9IjElUQaHRMTOTZWE62QRiG_FP3g/exec";
 
-let selectedItem = null; // 선택된 아이템 저장용
+    let selectedItem = null;
+    let selectedSkill = null;
+    let formulas = {};
 
-function loadItems() {
-  fetch(SHEETS_API_URL + "?type=items")
-    .then(res => res.json())
-    .then(data => {
-      const container = document.getElementById("equipList");
-      container.innerHTML = '';
-      data.forEach(item => {
-        const div = document.createElement("div");
-        div.textContent = `${item.이름} (+${item.힘 || 0} 힘 / +${item.지능 || 0} 지능)`;
-        div.style.border = '1px solid #ccc';
-        div.style.padding = '6px';
-        div.style.marginBottom = '4px';
-        div.style.cursor = 'pointer';
-        div.onclick = () => {
-          selectedItem = item;
-          highlightSelected(div, container);
-        };
-        container.appendChild(div);
+    function loadItems() {
+      fetch(SHEETS_API_URL + "?type=items")
+        .then(res => res.json())
+        .then(data => {
+          const container = document.getElementById("equipList");
+          container.innerHTML = '';
+          data.forEach(item => {
+            const div = document.createElement("div");
+            div.textContent = `${item.이름} (+${item.힘 || 0} 힘 / +${item.지능 || 0} 지능)`;
+            div.style.cssText = 'border:1px solid #ccc; padding:6px; margin-bottom:4px; cursor:pointer;';
+            div.onclick = () => {
+              selectedItem = item;
+              highlightSelected(div, container);
+            };
+            container.appendChild(div);
+          });
+        });
+    }
+
+    function loadSkills() {
+      fetch(SHEETS_API_URL + "?type=skills")
+        .then(res => res.json())
+        .then(data => {
+          const container = document.getElementById("skillList");
+          container.innerHTML = '';
+          data.forEach(skill => {
+            const div = document.createElement("div");
+            div.textContent = `${skill.스킬명} (계수 ${skill.계수})`;
+            div.style.cssText = 'border:1px solid #ccc; padding:6px; margin-bottom:4px; cursor:pointer;';
+            div.onclick = () => {
+              selectedSkill = skill;
+              highlightSelected(div, container);
+            };
+            container.appendChild(div);
+          });
+        });
+    }
+
+    function loadFormulas() {
+      fetch(SHEETS_API_URL + "?type=formulas")
+        .then(res => res.json())
+        .then(data => {
+          data.forEach(row => {
+            formulas[row.key] = row.formula;
+          });
+        });
+    }
+
+    function highlightSelected(selectedDiv, container) {
+      [...container.children].forEach(child => {
+        child.style.background = '';
+        child.style.fontWeight = 'normal';
       });
-    });
-}
-
-let selectedSkill = null;
-
-function loadSkills() {
-  fetch(SHEETS_API_URL + "?type=skills")
-    .then(res => res.json())
-    .then(data => {
-      const container = document.getElementById("skillList");
-      container.innerHTML = '';
-      data.forEach(skill => {
-        const div = document.createElement("div");
-        div.textContent = `${skill.스킬명} (계수 ${skill.계수})`;
-        div.style.border = '1px solid #ccc';
-        div.style.padding = '6px';
-        div.style.marginBottom = '4px';
-        div.style.cursor = 'pointer';
-        div.onclick = () => {
-          selectedSkill = skill;
-          highlightSelected(div, container);
-        };
-        container.appendChild(div);
-      });
-    });
-}
-
-function highlightSelected(selectedDiv, container) {
-  [...container.children].forEach(child => {
-    child.style.background = '';
-    child.style.fontWeight = 'normal';
-  });
-  selectedDiv.style.background = '#eef';
-  selectedDiv.style.fontWeight = 'bold';
-}
-
-let formulas = {};
-
-function loadFormulas() {
-  fetch(SHEETS_API_URL + "?type=formulas")
-    .then(res => res.json())
-    .then(data => {
-      data.forEach(row => {
-        formulas[row.key] = row.formula;
-      });
-    });
-}
-
+      selectedDiv.style.background = '#eef';
+      selectedDiv.style.fontWeight = 'bold';
+    }
 
     function calculateDamage() {
-  if (!selectedItem || !selectedSkill) {
-    alert("장비와 스킬을 모두 선택하세요.");
-    return;
-  }
-
-  const formula = formulas["기본계산식"];
-  if (!formula) {
-    alert("계산 수식을 불러오지 못했습니다.");
-    return;
-  }
-
-  const itemStat = Number(selectedItem.힘 || 0); // 예시로 '힘'만 사용
-  const skillMultiplier = Number(selectedSkill.계수 || 1);
-
-  // 수식 문자열을 동적으로 계산
-  const expression = formula
-    .replace(/itemStat/g, itemStat)
-    .replace(/skillMultiplier/g, skillMultiplier);
-
-  let result;
-  try {
-    result = eval(expression);
-  } catch (e) {
-    result = "에러: 수식 계산 실패";
-  }
-
-  document.getElementById("result").textContent = `결과: ${result}`;
-}
-
-function doGet(e) {
-  const type = e.parameter.type || "user";
-
-  // 사용자 이메일 가져오기 (로그인된 구글 계정)
-  const email = Session.getActiveUser().getEmail();
-  if (!email) {
-    return ContentService.createTextOutput(JSON.stringify({ error: "unauthorized" }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-
-  const usersSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("users");
-  const data = usersSheet.getDataRange().getValues();
-  const headers = data.shift(); // 첫 줄은 헤더
-
-  const userRow = data.find(row => row[0] === email); // 0번째 열 = 이메일
-  const userLevel = userRow ? userRow[2] : "unregistered";
-
-  // 데이터 요청 처리
-  if (type === "user") {
-    return ContentService.createTextOutput(JSON.stringify({ email, level: userLevel }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(type);
-  if (!sheet) {
-    return ContentService.createTextOutput("invalid sheet");
-  }
-
-  const sheetData = sheet.getDataRange().getValues();
-  const keys = sheetData.shift();
-  const json = sheetData.map(row => {
-    const obj = {};
-    keys.forEach((key, i) => obj[key] = row[i]);
-    return obj;
-  });
-
-  return ContentService.createTextOutput(JSON.stringify(json)).setMimeType(ContentService.MimeType.JSON);
-}
-
-
-function checkUserLevel() {
-  console.log("🔍 checkUserLevel() 실행됨");
-
-  fetch(SHEETS_API_URL)
-    .then(res => {
-      console.log("📥 응답 상태 코드:", res.status);
-      if (!res.ok) throw new Error("응답 실패 (HTTP " + res.status + ")");
-      return res.json();
-    })
-    .then(data => {
-      console.log("📦 응답 데이터:", data);
-
-      if (data.error === "unauthorized") {
-        alert("❗ Google 로그인 상태가 아니거나, 권한이 없습니다.");
+      if (!selectedItem || !selectedSkill) {
+        alert("장비와 스킬을 모두 선택하세요.");
         return;
       }
-
-      userEmail = data.email;
-      userLevel = data.level;
-      console.log("✅ 로그인 성공:", userEmail, "/", userLevel);
-
-      applyUserRestrictions();
-    })
-    .catch(err => {
-      alert("🚨 서버 오류 발생 (콘솔 로그 확인)");
-      console.error("❌ Fetch 실패 상세 정보:", err);
-    });
-}
-
-function handleLogin() {
-  const email = document.getElementById("loginEmail").value.trim();
-  const password = document.getElementById("loginPassword").value;
-
-  if (!email || !password) {
-    alert("이메일과 비밀번호를 입력하세요.");
-    return;
-  }
-
-  const hashed = CryptoJS.SHA256(password).toString();
-
-  fetch(`${SHEETS_API_URL}?type=secure_login&email=${encodeURIComponent(email)}&hash=${hashed}`)
-    .then(res => res.json())
-    .then(data => {
-      if (data.result === "success") {
-        localStorage.setItem("userEmail", email);
-        localStorage.setItem("userLevel", data.level);
-        alert("✅ 로그인 성공: " + data.level);
-        location.reload();
-      } else {
-        alert("❌ 로그인 실패: 이메일 또는 비밀번호가 일치하지 않습니다.");
+      const formula = formulas["기본계산식"];
+      if (!formula) {
+        alert("계산 수식을 불러오지 못했습니다.");
+        return;
       }
-    })
-    .catch(err => {
-      alert("🚨 서버 오류 발생");
-      console.error(err);
-    });
-}
+      const itemStat = Number(selectedItem.힘 || 0);
+      const skillMultiplier = Number(selectedSkill.계수 || 1);
+      const expression = formula.replace(/itemStat/g, itemStat).replace(/skillMultiplier/g, skillMultiplier);
+      let result;
+      try {
+        result = eval(expression);
+      } catch (e) {
+        result = "에러: 수식 계산 실패";
+      }
+      document.getElementById("result").textContent = `결과: ${result}`;
+    }
 
+    function checkUserLevel() {
+      fetch(SHEETS_API_URL + "?type=user")
+        .then(res => res.json())
+        .then(data => {
+          if (data.error === "unauthorized") {
+            alert("❗ Google 로그인 상태가 아니거나, 권한이 없습니다.");
+            return;
+          }
+          const userLevel = data.level;
+          if (userLevel === "관리자") {
+            document.getElementById("adminPanel").style.display = "block";
+          }
+        })
+        .catch(err => {
+          console.error("로그인 확인 오류:", err);
+        });
+    }
 
-window.onload = function () {
-  const email = localStorage.getItem("userEmail");
-  const level = localStorage.getItem("userLevel");
+    function handleLogin() {
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPassword").value;
+      if (!email || !password) return alert("이메일과 비밀번호를 입력하세요.");
+      const hashed = CryptoJS.SHA256(password).toString();
+      fetch(`${SHEETS_API_URL}?type=secure_login&email=${encodeURIComponent(email)}&hash=${hashed}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.result === "success") {
+            localStorage.setItem("userEmail", email);
+            localStorage.setItem("userLevel", data.level);
+            alert("✅ 로그인 성공: " + data.level);
+            location.reload();
+          } else {
+            alert("❌ 로그인 실패: 이메일 또는 비밀번호가 일치하지 않습니다.");
+          }
+        })
+        .catch(err => {
+          alert("🚨 서버 오류 발생");
+          console.error(err);
+        });
+    }
 
-  if (email && level) {
-    document.getElementById("loginBox").style.display = "none";
-    // 다른 UI 열기 등 추가 작업 가능
-  } else {
-    document.getElementById("loginBox").style.display = "block";
-  }
-
-  loadItems();
-  loadSkills();
-  loadFormulas();
-  checkUserLevel();
-};
-
-
+    window.onload = function () {
+      const email = localStorage.getItem("userEmail");
+      const level = localStorage.getItem("userLevel");
+      if (email && level) {
+        document.getElementById("loginBox").style.display = "none";
+      } else {
+        document.getElementById("loginBox").style.display = "block";
+      }
+      loadItems();
+      loadSkills();
+      loadFormulas();
+      checkUserLevel();
+    };
   </script>
-  <div id="loginBox">
-  <h2>로그인</h2>
-  <input type="email" id="loginEmail" placeholder="이메일" />
-  <input type="password" id="loginPassword" placeholder="비밀번호" />
-  <button onclick="handleLogin()">로그인</button>
-</div>
-
 </body>
 </html>
