@@ -219,8 +219,22 @@ function logout() {
 }
     
     window.onload = function () {
-
-    };
+  // 자동 로그인 유지: 이전에 로그인된 계정 정보가 남아 있으면 자동 실행
+  const email = localStorage.getItem("userEmail");
+  const level = localStorage.getItem("userLevel");
+  if (email && level) {
+    // 만약 이미 로그인 정보가 있다면
+    document.getElementById('logoutBtn').style.display = 'inline-block';
+    // 이전 로그인 세션(아이디 토큰)을 복구할 수 있으면 해야 함 (보통 GSI에서 자동 발급)
+    // 그 외엔 그냥 loadItems/loadSkills/loadFormulas를 실행하면 목록이 바로 보임
+    loadItems();
+    loadSkills();
+    loadFormulas();
+  } else {
+    document.getElementById('logoutBtn').style.display = 'none';
+    // 로그인 UI만 보이게(필요시 추가)
+  }
+};
   </script>
 </body>
 </html>
