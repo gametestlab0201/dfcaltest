@@ -162,23 +162,28 @@
     }
 
     function checkUserLevel() {
-      fetch(SHEETS_API_URL + "?type=user")
-        .then(res => res.json())
-        .then(data => {
-          if (data.error === "unauthorized") {
-            alert("❗ Google 로그인 상태가 아니거나, 권한이 없습니다.");
-            return;
-          }
-          const userLevel = data.level;
-          if (userLevel === "관리자") {
-            document.getElementById("adminPanel").style.display = "block";
-          }
-        })
-        .catch(err => {
-          console.error("로그인 확인 오류:", err);
-        });
-    }
+  fetch(`${SHEETS_API_URL}?type=user`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.error === "unauthorized") {
+        alert("❌ Google 로그인이 필요합니다.");
+        return;
+      }
+      if (data.error === "not_allowed") {
+        alert("❌ 허용된 사용자만 접근할 수 있습니다.");
+        return;
+      }
 
+      localStorage.setItem("userEmail", data.email);
+      localStorage.setItem("userLevel", data.level);
+      console.log("✅ 로그인 성공:", data.email, "/", data.level);
+      applyUserRestrictions();  // 등급에 따른 UI 조정
+    })
+    .catch(err => {
+      alert("🚨 서버 오류 발생");
+      console.error(err);
+    });
+}
     function handleLogin() {
       const email = document.getElementById("loginEmail").value.trim();
       const password = document.getElementById("loginPassword").value;
